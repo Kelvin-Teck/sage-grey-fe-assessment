@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { StarWarsProvider } from './context/StarWarsContext';
 import Header from './components/Header';
@@ -7,44 +7,57 @@ import Home from './pages/Home';
 import Details from './pages/Details';
 import SearchResults from './pages/SearchResults';
 
+
+function useDebouncedResize(callback: () => void, delay = 150) {
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const handler = () => {
+      clearTimeout(timer);
+      timer = setTimeout(callback, delay);
+    };
+    window.addEventListener('resize', handler);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handler);
+    };
+  }, [callback, delay]);
+}
+
 export default function App() {
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // Sidebar is open by default on desktop (>1024px), closed on mobile/tablet
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 1024);
 
-  const toggleSidebar = () => {
-    setMobileSidebarOpen(prev => !prev);
-  };
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
+  // Only auto-close when tapping the overlay on mobile/tablet
   const closeSidebar = () => {
-    setMobileSidebarOpen(false);
+    if (window.innerWidth <= 1024) setSidebarOpen(false);
   };
+
+  // Fix #8: Debounced resize listener — re-evaluates breakpoint after user
+  // stops resizing, avoiding cascading state updates during continuous drag.
+  useDebouncedResize(() => {
+    setSidebarOpen(window.innerWidth > 1024);
+  }, 150);
 
   return (
     <StarWarsProvider>
       <BrowserRouter>
-        <div className="app-container">
-          {/* Overlay to close sidebar on mobile click outside */}
-          {mobileSidebarOpen && (
-            <div 
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0,0,0,0.5)',
-                zIndex: 85,
-                backdropFilter: 'blur(4px)'
-              }}
-              onClick={closeSidebar}
-            />
+        {/* Fix #3: The root class drives ALL sidebar visibility via CSS rules.
+            No conflicting inline styles on the overlay element. */}
+        <div className={`app-container ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
+          {/* Overlay: CSS hides this on desktop via display:none in .mobile-overlay.
+              Only visible on viewports ≤1024px when the sidebar is open. */}
+          {sidebarOpen && (
+            <div className="mobile-overlay" onClick={closeSidebar} />
           )}
 
           {/* Sidebar Navigation */}
-          <Sidebar isOpen={mobileSidebarOpen} onClose={closeSidebar} />
+          <Sidebar onClose={closeSidebar} />
 
           {/* Main Layout Area */}
           <div className="main-content">
-            {/* Header with Search and Mobile Menu Trigger */}
+            {/* Header with Search and Menu Trigger */}
             <Header onToggleSidebar={toggleSidebar} />
 
             {/* Render Routing Viewports */}

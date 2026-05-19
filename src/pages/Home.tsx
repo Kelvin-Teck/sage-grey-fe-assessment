@@ -1,42 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchPeople, type PersonSummary } from '../services/swapi';
 import CharacterCard from '../components/CharacterCard';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorState from '../components/ErrorState';
+import '../styles/Home.css';
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Read current page from URL params (defaults to 1)
+
   const pageParam = searchParams.get('page');
-  const currentPage = pageParam ? parseInt(pageParam, 10) : 1;
+  const parsed = parseInt(pageParam ?? '', 10);
+  const currentPage = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [characters, setCharacters] = useState<PersonSummary[]>([]);
   const [totalPages, setTotalPages] = useState(1);
 
-  const loadCharacters = async (page: number) => {
+  
+  const loadCharacters = useCallback(async (page: number, signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchPeople(page, 10);
+      const data = await fetchPeople(page, 12, signal);
       setCharacters(data.results);
       setTotalPages(data.total_pages);
     } catch (err) {
+      
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.error(err);
       setError('Unable to establish connection to the Star Wars Archives. Please try again.');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, []);
 
-  // Re-fetch when currentPage URL query parameter changes
+  
   useEffect(() => {
-    loadCharacters(currentPage);
-  }, [currentPage]);
+    const controller = new AbortController();
+    loadCharacters(currentPage, controller.signal);
+    return () => controller.abort();
+  }, [currentPage, loadCharacters]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages) return;
@@ -51,9 +57,9 @@ export default function Home() {
   return (
     <div>
       <h2 className="grid-title">Star Wars Universe Characters</h2>
-      
+
       {loading ? (
-        <LoadingSkeleton type="grid" count={10} />
+        <LoadingSkeleton type="grid" count={12} />
       ) : (
         <>
           <div className="characters-grid">

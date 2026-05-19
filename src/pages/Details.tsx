@@ -1,21 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Heart, Film, Globe } from 'lucide-react';
 import { useStarWars } from '../context/StarWarsContext';
 import { fetchPersonDetails, type PersonDetail } from '../services/swapi';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorState from '../components/ErrorState';
+import '../styles/Details.css';
 
 export default function Details() {
   const { id } = useParams<{ id: string }>();
-  const { 
-    isFavorite, 
-    addFavorite, 
+  
+  const navigate = useNavigate();
+
+  const {
+    isFavorite,
+    addFavorite,
     removeFavorite,
     getCachedCharacter,
     setCachedCharacter,
     getPlanetName,
-    getFilmTitle
+    getFilmTitle,
   } = useStarWars();
 
   const [loading, setLoading] = useState(true);
@@ -26,54 +30,57 @@ export default function Details() {
 
   const fav = id ? isFavorite(id) : false;
 
-  const loadCharacterDetails = async (uid: string) => {
+  const loadCharacterDetails = useCallback(async (uid: string, signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     setHomeworldName('Resolving coordinates...');
     setFilmTitles([]);
 
     try {
-      // Check cache first for character details
       let charData = getCachedCharacter(uid);
-      
+
       if (!charData) {
-        const response = await fetchPersonDetails(uid);
+        
+        const response = await fetchPersonDetails(uid, signal);
+        if (signal?.aborted) return;
         charData = response.result;
         setCachedCharacter(uid, charData);
       }
-      
+
       setCharacter(charData);
 
-      // Now resolve planet and film details in parallel
       const props = charData.properties;
-      
-      // Homeworld resolver
-      const homeworldPromise = getPlanetName(props.homeworld)
-        .then(name => setHomeworldName(name))
-        .catch(() => setHomeworldName('Unknown Sector'));
 
-      // Film titles resolver (parallel execution!)
-      const filmsPromise = props.films && props.films.length > 0
-        ? Promise.all(props.films.map(url => getFilmTitle(url)))
-            .then(titles => setFilmTitles(titles))
-            .catch(() => setFilmTitles(['Unknown Galactic Records']))
-        : Promise.resolve().then(() => setFilmTitles(['No record of active combat appearances']));
+      const homeworldPromise = getPlanetName(props.homeworld)
+        .then((name) => { if (!signal?.aborted) setHomeworldName(name); })
+        .catch(() => { if (!signal?.aborted) setHomeworldName('Unknown Sector'); });
+
+      const filmsPromise =
+        props.films && props.films.length > 0
+          ? Promise.all(props.films.map((url) => getFilmTitle(url)))
+              .then((titles) => { if (!signal?.aborted) setFilmTitles(titles); })
+              .catch(() => { if (!signal?.aborted) setFilmTitles(['Unknown Galactic Records']); })
+          : Promise.resolve().then(() => {
+              if (!signal?.aborted) setFilmTitles(['No record of active combat appearances']);
+            });
 
       await Promise.all([homeworldPromise, filmsPromise]);
-
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.error(err);
       setError('System malfunction. Could not decrypt database archives for this entity.');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [getCachedCharacter, setCachedCharacter, getPlanetName, getFilmTitle]);
 
+  
   useEffect(() => {
-    if (id) {
-      loadCharacterDetails(id);
-    }
-  }, [id]);
+    if (!id) return;
+    const controller = new AbortController();
+    loadCharacterDetails(id, controller.signal);
+    return () => controller.abort();
+  }, [id, loadCharacterDetails]);
 
   const handleFavoriteToggle = () => {
     if (!id || !character) return;
@@ -92,10 +99,10 @@ export default function Details() {
     return (
       <div>
         <div className="back-nav">
-          <Link to="/" className="back-btn">
+          <button className="back-btn" onClick={() => navigate(-1)}>
             <ArrowLeft size={16} />
-            <span>Return to System Directory</span>
-          </Link>
+            <span>Go Back</span>
+          </button>
         </div>
         <LoadingSkeleton type="details" />
       </div>
@@ -106,11 +113,12 @@ export default function Details() {
 
   return (
     <div>
+      
       <div className="back-nav">
-        <Link to="/" className="back-btn">
+        <button className="back-btn" onClick={() => navigate(-1)}>
           <ArrowLeft size={16} />
-          <span>Return to System Directory</span>
-        </Link>
+          <span>Go Back</span>
+        </button>
       </div>
 
       <article className="details-card">
@@ -126,7 +134,7 @@ export default function Details() {
             aria-label={fav ? 'Remove from favorites' : 'Add to favorites'}
           >
             <Heart size={18} fill={fav ? 'var(--color-amber)' : 'none'} />
-            <span>{fav ? 'FAVORITED' : 'MARK AS FAVORITE'}</span>
+            <span>{fav ? 'FAVOURITE' : 'MARK AS FAVOURITE'}</span>
           </button>
         </div>
 
@@ -136,15 +144,21 @@ export default function Details() {
             <div className="specs-grid">
               <div className="spec-item">
                 <span className="spec-label">Height</span>
-                <span className="spec-value">{props.height !== 'unknown' ? `${props.height} cm` : 'Unknown'}</span>
+                <span className="spec-value">
+                  {props.height !== 'unknown' ? `${props.height} cm` : 'Unknown'}
+                </span>
               </div>
               <div className="spec-item">
                 <span className="spec-label">Mass</span>
-                <span className="spec-value">{props.mass !== 'unknown' ? `${props.mass} kg` : 'Unknown'}</span>
+                <span className="spec-value">
+                  {props.mass !== 'unknown' ? `${props.mass} kg` : 'Unknown'}
+                </span>
               </div>
               <div className="spec-item">
                 <span className="spec-label">Gender</span>
-                <span className="spec-value" style={{ textTransform: 'capitalize' }}>{props.gender}</span>
+                <span className="spec-value" style={{ textTransform: 'capitalize' }}>
+                  {props.gender}
+                </span>
               </div>
               <div className="spec-item">
                 <span className="spec-label">Birth Year</span>
@@ -152,15 +166,21 @@ export default function Details() {
               </div>
               <div className="spec-item">
                 <span className="spec-label">Eye Color</span>
-                <span className="spec-value" style={{ textTransform: 'capitalize' }}>{props.eye_color}</span>
+                <span className="spec-value" style={{ textTransform: 'capitalize' }}>
+                  {props.eye_color}
+                </span>
               </div>
               <div className="spec-item">
                 <span className="spec-label">Hair Color</span>
-                <span className="spec-value" style={{ textTransform: 'capitalize' }}>{props.hair_color}</span>
+                <span className="spec-value" style={{ textTransform: 'capitalize' }}>
+                  {props.hair_color}
+                </span>
               </div>
               <div className="spec-item" style={{ gridColumn: 'span 2' }}>
                 <span className="spec-label">Skin Tone</span>
-                <span className="spec-value" style={{ textTransform: 'capitalize' }}>{props.skin_color}</span>
+                <span className="spec-value" style={{ textTransform: 'capitalize' }}>
+                  {props.skin_color}
+                </span>
               </div>
             </div>
           </div>
@@ -178,8 +198,8 @@ export default function Details() {
             <div>
               <h3 className="details-section-title">Galactic Event Chronology</h3>
               <div className="films-list">
-                {filmTitles.map((title, idx) => (
-                  <div key={idx} className="film-item">
+                {filmTitles.map((title) => (
+                  <div key={title} className="film-item">
                     <Film size={16} className="film-icon" />
                     <span>{title}</span>
                   </div>

@@ -1,3 +1,5 @@
+import '../styles/LoadingSkeleton.css';
+
 interface LoadingSkeletonProps {
   type?: 'grid' | 'details';
   count?: number;

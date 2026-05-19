@@ -1,17 +1,17 @@
 import { Link } from 'react-router-dom';
 import { Heart, Trash2, ShieldAlert } from 'lucide-react';
 import { useStarWars } from '../context/StarWarsContext';
+import '../styles/Sidebar.css';
 
 interface SidebarProps {
-  isOpen?: boolean;
   onClose?: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ onClose }: SidebarProps) {
   const { favorites, removeFavorite } = useStarWars();
 
   return (
-    <aside className={`sidebar-wrapper ${isOpen ? 'mobile-open' : ''}`}>
+    <aside className="sidebar-wrapper">
       <div className="sidebar-title-section">
         <Heart size={16} style={{ color: 'var(--color-red)' }} />
         <h2 className="sidebar-title">FAVORITES ({favorites.length})</h2>

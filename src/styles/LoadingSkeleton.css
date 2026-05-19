@@ -1,0 +1,37 @@
+/* Loading Skeletons (Bright Minimalist) */
+.skeleton-card {
+  height: 150px;
+  background: #f1f5f9;
+  border-radius: var(--border-radius);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  position: relative;
+}
+
+.skeleton-shimmer {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.65) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Shimmer Loading states inside details */
+.skeleton-line {
+  height: 1.15rem;
+  width: 100%;
+  background: #f1f5f9;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}

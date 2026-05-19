@@ -23,7 +23,7 @@ export interface PersonProperties {
   birth_year: string;
   gender: string;
   homeworld: string; // URL
-  films: string[]; // URLs
+  films: string[];   // URLs
   species: string[];
   vehicles: string[];
   starships: string[];
@@ -44,7 +44,7 @@ export interface PersonDetailResponse {
   result: PersonDetail;
 }
 
-// For search results which returns an array of PersonDetail objects directly
+
 export interface SearchResponse {
   message: string;
   result: PersonDetail[];
@@ -90,60 +90,58 @@ export interface FilmDetailResponse {
 }
 
 const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "https://www.swapi.tech/api";
+  import.meta.env.VITE_API_BASE_URL || 'https://www.swapi.tech/api';
 
+// Fetch a paginated list of characters.
 
-/**
- * Fetch a paginated list of characters
- */
-export async function fetchPeople(page = 1, limit = 10): Promise<PaginatedResponse<PersonSummary>> {
-  const response = await fetch(`${BASE_URL}/people/?page=${page}&limit=${limit}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch characters (Page ${page})`);
-  }
+export async function fetchPeople(
+  page = 1,
+  limit = 10,
+  signal?: AbortSignal,
+): Promise<PaginatedResponse<PersonSummary>> {
+  const response = await fetch(
+    `${BASE_URL}/people/?page=${page}&limit=${limit}`,
+    { signal },
+  );
+  if (!response.ok) throw new Error(`Failed to fetch characters (Page ${page})`);
   return response.json();
 }
 
-/**
- * Fetch detailed information for a single character by UID
- */
-export async function fetchPersonDetails(uid: string): Promise<PersonDetailResponse> {
-  const response = await fetch(`${BASE_URL}/people/${uid}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch character details for ID: ${uid}`);
-  }
+// Fetch detailed information for a single character by UID.
+export async function fetchPersonDetails(
+  uid: string,
+  signal?: AbortSignal,
+): Promise<PersonDetailResponse> {
+  const response = await fetch(`${BASE_URL}/people/${uid}`, { signal });
+  if (!response.ok) throw new Error(`Failed to fetch character details for ID: ${uid}`);
   return response.json();
 }
 
-/**
- * Search for characters by name (partial match, case-insensitive)
- */
-export async function searchPeople(query: string): Promise<SearchResponse> {
-  const response = await fetch(`${BASE_URL}/people/?name=${encodeURIComponent(query)}`);
-  if (!response.ok) {
-    throw new Error(`Failed to search characters for query: "${query}"`);
-  }
+// Search for characters by name (partial match, case-insensitive).
+export async function searchPeople(
+  query: string,
+  signal?: AbortSignal,
+): Promise<SearchResponse> {
+  const response = await fetch(
+    `${BASE_URL}/people/?name=${encodeURIComponent(query)}`,
+    { signal },
+  );
+  if (!response.ok) throw new Error(`Failed to search characters for query: "${query}"`);
   return response.json();
 }
 
-/**
- * Fetch planet details by planet URL
- */
+// Fetch planet details by planet URL (full URL from character properties).
 export async function fetchPlanetDetails(url: string): Promise<PlanetDetailResponse> {
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch planet details from: ${url}`);
-  }
+  if (!response.ok) throw new Error(`Failed to fetch planet details from: ${url}`);
   return response.json();
 }
 
 /**
- * Fetch film details by film URL
+ * Fetch film details by film URL (full URL from character properties).
  */
 export async function fetchFilmDetails(url: string): Promise<FilmDetailResponse> {
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch film details from: ${url}`);
-  }
+  if (!response.ok) throw new Error(`Failed to fetch film details from: ${url}`);
   return response.json();
 }

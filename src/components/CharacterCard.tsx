@@ -1,7 +1,8 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ArrowRight } from 'lucide-react';
 import { useStarWars } from '../context/StarWarsContext';
+import type { MouseEvent } from 'react';
+import '../styles/CharacterCard.css';
 
 interface CharacterCardProps {
   uid: string;
@@ -12,7 +13,7 @@ export default function CharacterCard({ uid, name }: CharacterCardProps) {
   const { isFavorite, addFavorite, removeFavorite } = useStarWars();
   const fav = isFavorite(uid);
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (fav) {
@@ -40,7 +41,11 @@ export default function CharacterCard({ uid, name }: CharacterCardProps) {
           aria-label={fav ? 'Remove from favorites' : 'Add to favorites'}
           title={fav ? 'Remove from favorites' : 'Add to favorites'}
         >
-          <Heart size={16} fill={fav ? 'var(--color-amber)' : 'none'} style={{ stroke: fav ? 'var(--color-amber)' : 'var(--text-secondary)' }} />
+          <Heart
+            size={16}
+            fill={fav ? 'var(--color-amber)' : 'none'}
+            style={{ stroke: fav ? 'var(--color-amber)' : 'var(--text-secondary)' }}
+          />
         </button>
       </div>
     </div>

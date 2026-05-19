@@ -1,4 +1,13 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import { fetchPlanetDetails, fetchFilmDetails, type PersonDetail } from '../services/swapi';
 
 export interface FavoriteItem {
@@ -14,7 +23,6 @@ interface StarWarsContextType {
   searchHistory: string[];
   addSearchQuery: (query: string) => void;
   clearSearchHistory: () => void;
-  // Caching mechanism
   getPlanetName: (url: string) => Promise<string>;
   getFilmTitle: (url: string) => Promise<string>;
   getCachedCharacter: (uid: string) => PersonDetail | null;
@@ -29,25 +37,20 @@ export function StarWarsProvider({ children }: { children: ReactNode }) {
     try {
       const saved = localStorage.getItem('sw_favorites');
       return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
-  // Search History State (Persisted in localStorage)
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('sw_search_history');
       return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
-  // In-memory relationship caches to avoid duplicate network requests
-  const [planetCache, setPlanetCache] = useState<Record<string, string>>({});
-  const [filmCache, setFilmCache] = useState<Record<string, string>>({});
-  const [characterCache, setCharacterCache] = useState<Record<string, PersonDetail>>({});
+  // In-memory caches as refs — writes are synchronous and never trigger re-renders
+  const planetCache = useRef<Record<string, string>>({});
+  const filmCache = useRef<Record<string, string>>({});
+  const characterCache = useRef<Record<string, PersonDetail>>({});
 
   // Sync favorites with localStorage
   useEffect(() => {
@@ -59,77 +62,68 @@ export function StarWarsProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('sw_search_history', JSON.stringify(searchHistory));
   }, [searchHistory]);
 
-  const addFavorite = (uid: string, name: string) => {
+  const addFavorite = useCallback((uid: string, name: string) => {
     setFavorites((prev) => {
       if (prev.some((item) => item.uid === uid)) return prev;
       return [...prev, { uid, name }];
     });
-  };
+  }, []);
 
-  const removeFavorite = (uid: string) => {
+  const removeFavorite = useCallback((uid: string) => {
     setFavorites((prev) => prev.filter((item) => item.uid !== uid));
-  };
+  }, []);
 
-  const isFavorite = (uid: string) => {
-    return favorites.some((item) => item.uid === uid);
-  };
+  
+  const favoriteUids = useMemo(() => new Set(favorites.map((f) => f.uid)), [favorites]);
+  const isFavorite = useCallback((uid: string) => favoriteUids.has(uid), [favoriteUids]);
 
-  const addSearchQuery = (query: string) => {
+  const addSearchQuery = useCallback((query: string) => {
     const trimmed = query.trim();
     if (!trimmed) return;
-
     setSearchHistory((prev) => {
       // Remove query if it already exists, then push to front
       const filtered = prev.filter((q) => q.toLowerCase() !== trimmed.toLowerCase());
-      const updated = [trimmed, ...filtered];
-      // Keep maximum 5 items
-      return updated.slice(0, 5);
+      return [trimmed, ...filtered].slice(0, 5);
     });
-  };
+  }, []);
 
-  const clearSearchHistory = () => {
-    setSearchHistory([]);
-  };
+  const clearSearchHistory = useCallback(() => setSearchHistory([]), []);
 
-  // Optimized homeworld name getter using local cache or API fetch
-  const getPlanetName = async (url: string): Promise<string> => {
-    if (planetCache[url]) {
-      return planetCache[url];
-    }
+  
+  const getPlanetName = useCallback(async (url: string): Promise<string> => {
+    if (planetCache.current[url]) return planetCache.current[url];
     try {
       const data = await fetchPlanetDetails(url);
       const name = data.result.properties.name;
-      setPlanetCache((prev) => ({ ...prev, [url]: name }));
+      planetCache.current[url] = name;
       return name;
     } catch (err) {
       console.error(`Failed to resolve planet name from URL ${url}:`, err);
       return 'Unknown Planet';
     }
-  };
+  }, []);
 
-  // Optimized film title getter using local cache or API fetch
-  const getFilmTitle = async (url: string): Promise<string> => {
-    if (filmCache[url]) {
-      return filmCache[url];
-    }
+  const getFilmTitle = useCallback(async (url: string): Promise<string> => {
+    if (filmCache.current[url]) return filmCache.current[url];
     try {
       const data = await fetchFilmDetails(url);
       const title = data.result.properties.title;
-      setFilmCache((prev) => ({ ...prev, [url]: title }));
+      filmCache.current[url] = title;
       return title;
     } catch (err) {
       console.error(`Failed to resolve film title from URL ${url}:`, err);
       return 'Unknown Episode';
     }
-  };
+  }, []);
 
-  const getCachedCharacter = (uid: string): PersonDetail | null => {
-    return characterCache[uid] || null;
-  };
+  const getCachedCharacter = useCallback(
+    (uid: string): PersonDetail | null => characterCache.current[uid] ?? null,
+    [],
+  );
 
-  const setCachedCharacter = (uid: string, data: PersonDetail) => {
-    setCharacterCache((prev) => ({ ...prev, [uid]: data }));
-  };
+  const setCachedCharacter = useCallback((uid: string, data: PersonDetail) => {
+    characterCache.current[uid] = data;
+  }, []);
 
   return (
     <StarWarsContext.Provider

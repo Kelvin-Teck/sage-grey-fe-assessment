@@ -1,0 +1,90 @@
+/* Character Card Component (Bright Minimalist) */
+.character-card {
+  background: var(--bg-card);
+  border: 1px solid var(--color-glass-border);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  transition: var(--transition-smooth);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.character-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-glass-border-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.character-name {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  transition: var(--transition-smooth);
+}
+
+.character-card:hover .character-name {
+  color: var(--color-cyan);
+}
+
+.character-meta {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.75rem;
+}
+
+.card-link {
+  font-size: 0.82rem;
+  color: var(--color-cyan);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  transition: var(--transition-smooth);
+}
+
+.card-link:hover {
+  opacity: 0.85;
+}
+
+.card-fav-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  border-radius: 50%;
+  transition: var(--transition-smooth);
+}
+
+.card-fav-btn.is-fav {
+  color: var(--color-amber);
+}
+
+.card-fav-btn:hover {
+  background: #f8fafc;
+  transform: scale(1.08);
+}

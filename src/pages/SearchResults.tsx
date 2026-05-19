@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { SearchCode } from 'lucide-react';
 import { searchPeople, type PersonDetail } from '../services/swapi';
 import CharacterCard from '../components/CharacterCard';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import ErrorState from '../components/ErrorState';
+import '../styles/Home.css';
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams();
@@ -14,7 +15,8 @@ export default function SearchResults() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<PersonDetail[]>([]);
 
-  const performSearch = async (searchTerm: string) => {
+  
+  const performSearch = useCallback(async (searchTerm: string, signal?: AbortSignal) => {
     if (!searchTerm.trim()) {
       setResults([]);
       setLoading(false);
@@ -24,19 +26,23 @@ export default function SearchResults() {
     setLoading(true);
     setError(null);
     try {
-      const data = await searchPeople(searchTerm);
+      const data = await searchPeople(searchTerm, signal);
       setResults(data.result);
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.error(err);
       setError('Search failure. The archive system is currently overloaded.');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, []);
 
+  
   useEffect(() => {
-    performSearch(query);
-  }, [query]);
+    const controller = new AbortController();
+    performSearch(query, controller.signal);
+    return () => controller.abort();
+  }, [query, performSearch]);
 
   if (error) {
     return <ErrorState message={error} onRetry={() => performSearch(query)} />;
@@ -55,7 +61,8 @@ export default function SearchResults() {
           <SearchCode size={48} style={{ color: 'var(--text-muted)', strokeWidth: 1.5 }} />
           <h2 className="empty-title">No Records Found</h2>
           <p className="empty-desc">
-            No characters in our star maps match the name "{query}". Try checking your spelling or search for alternative entities.
+            No characters in our star maps match the name "{query}". Try checking your spelling
+            or search for alternative entities.
           </p>
         </div>
       ) : (
@@ -65,10 +72,10 @@ export default function SearchResults() {
           </p>
           <div className="characters-grid">
             {results.map((char) => (
-              <CharacterCard 
-                key={char.uid} 
-                uid={char.uid} 
-                name={char.properties.name} 
+              <CharacterCard
+                key={char.uid}
+                uid={char.uid}
+                name={char.properties.name}
               />
             ))}
           </div>
