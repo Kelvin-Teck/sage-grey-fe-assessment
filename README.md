@@ -67,12 +67,17 @@ You need [Node.js](https://nodejs.org/) (v18+) installed on your machine.
 
 ### Installation
 
-1. Navigate to the project root directory:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Kelvin-Teck/sage-grey-fe-assessment.git
+   ```
+
+2. Navigate to the project root directory:
    ```bash
    cd sage-grey-fe-assessment
    ```
 
-2. Install the package dependencies:
+3. Install the package dependencies:
    ```bash
    npm install
    ```
